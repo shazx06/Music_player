@@ -87,7 +87,7 @@ class HeaderBarWindow(Gtk.Window):
        
         self.box_.pack_start(self.music_windows,True,True,0)
 
-        people_list_store = Gtk.ListStore(int, str)
+        people_list_store = Gtk.ListStore(int, str,str)
         
         self.add(self.box_)
 
@@ -95,16 +95,22 @@ class HeaderBarWindow(Gtk.Window):
         music_=os.listdir("/home/shazib/Music/mp3")
         self.music_=music_
         self.w_dir="/home/shazib/Music/mp3/"
-      
+
         for item in enumerate (  music_):
             item=list(item)
+            try:
+              timing=eyed3.load(self.w_dir+item[1]).info.time_secs
+              self.pure_time="0"+str(int(timing//60))+":"+str(int(timing%60))
+            except:
+                self.pure_time="NA"
+            item.append(self.pure_time)
             item[1]=item[1][:30]
 
             people_list_store.append(item)
 
         self.people_tree_view = Gtk.TreeView(people_list_store)
 
-        for i, col_title in enumerate(["No..","music"]):
+        for i, col_title in enumerate(["No..","music", "time"]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(col_title, renderer, text=i)
 
@@ -122,6 +128,8 @@ class HeaderBarWindow(Gtk.Window):
         self.new_box= Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=10)
         self.progres=Gtk.ProgressBar()
         self.progres.set_property("width-request",200)
+        self.progres.set_show_text(True)
+        self.progres.set_text("NA")
         self.box_.add(self.new_box)
         self.new_box.pack_end(self.progres,True,True,0)
 
@@ -129,10 +137,14 @@ class HeaderBarWindow(Gtk.Window):
         self.title.set_property("width-request", 200)
         self.new_box.pack_start(self.title,False, True,0)
         
-        self.time_call=GObject.timeout_add(350,self.prosetter,None)
-    
+        self.time_call=GObject.timeout_add(1000,self.prosetter,None)
+        self.s_volume()
     def prosetter(self, user_data):
-        self.progres.set_fraction(pygame.mixer.music.get_pos()/self.time)
+        self.play_time=pygame.mixer.music.get_pos()/1000
+        self.progres.set_fraction(self.play_time/self.time)
+        self.show_time="0"+str(int(self.play_time//60))+":"+str(int(self.play_time%60))
+
+        self.progres.set_text(str(self.show_time+"/"+self.pure_time))
         return True
 
     def playsong(self,music_,widget,**args):
@@ -144,7 +156,7 @@ class HeaderBarWindow(Gtk.Window):
             self.text=load
         
         self.title.set_markup(f"<b>{self.text}</b>")
-        self.time=music_file.info.time_secs*1000
+        self.time=music_file.info.time_secs
         
         print(self.time)
          
@@ -204,29 +216,6 @@ class HeaderBarWindow(Gtk.Window):
         print(volume_)
         pygame.mixer.music.set_volume(volume_)
 
-    
-
-    def marquee(self, text):
-            self.z=len(text)
-            if self.a < len(text):
-                self.a = self.a + 1
-                self.z = self.z + 1
-                if self.a >= len(text):
-                    self.a = 0
-                    self.z = 40
-            return str(text[self.a:self.z])
-
-        # Displays Marquee
-    def displayMarquee(self):
-            #  putting our text into our function and setting our label to the result. 
-            #  we need to return "True" to ensure the timer continues to run, otherwise it will only run once.
-            self.title.set_markup(f'<b>{self.marquee(self.text)}</b>')
-            return True
-
-        # Initialize Marquee
-    def startMarquee(self):
-            #  this takes 2 args: (how often to update in millisec, the method to run)
-            GObject.timeout_add(500, self.displayMarquee)
             
 
 
@@ -234,5 +223,5 @@ class HeaderBarWindow(Gtk.Window):
 window = HeaderBarWindow()
 window.connect("delete-event", Gtk.main_quit)
 window.show_all()
-window.startMarquee()
+
 Gtk.main()
