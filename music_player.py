@@ -12,12 +12,13 @@ class HeaderBarWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="")
         self.set_border_width(10)
-        self.set_default_size(500, 400)
+        self.set_default_size(735, 495)
         self.Active=0
         self.Check=None
         self.time=80
         self.a=0
         self.z=40
+        self.exact_time="0:0"
         self.text=""
         # Initiating Pygame
         pygame.init()
@@ -87,7 +88,7 @@ class HeaderBarWindow(Gtk.Window):
        
         self.box_.pack_start(self.music_windows,True,True,0)
 
-        people_list_store = Gtk.ListStore(int, str,str)
+        people_list_store = Gtk.ListStore(int, str,str,str)
         
         self.add(self.box_)
 
@@ -103,6 +104,12 @@ class HeaderBarWindow(Gtk.Window):
               self.pure_time="0"+str(int(timing//60))+":"+str(int(timing%60))
             except:
                 self.pure_time="NA"
+            try:
+              artist=eyed3.load(self.w_dir+item[1]).tag.artist[:30]
+              
+            except:
+                artist="NA"
+            item.append(artist)
             item.append(self.pure_time)
             item[1]=item[1][:30]
 
@@ -110,7 +117,7 @@ class HeaderBarWindow(Gtk.Window):
 
         self.people_tree_view = Gtk.TreeView(people_list_store)
 
-        for i, col_title in enumerate(["No..","music", "time"]):
+        for i, col_title in enumerate(["No..","music", "artist","time"]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(col_title, renderer, text=i)
 
@@ -126,6 +133,11 @@ class HeaderBarWindow(Gtk.Window):
         # selected_row.connect("changed", self.item_selected)
         box_music.pack_start(self.people_tree_view,True,True,0)
         self.new_box= Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=10)
+        self.seperate=Gtk.HSeparator()
+        self.sep_box=Gtk.HBox()
+        self.box_.add(self.sep_box)
+        self.sep_box.add(self.seperate)
+
         self.progres=Gtk.ProgressBar()
         self.progres.set_property("width-request",200)
         self.progres.set_show_text(True)
@@ -138,13 +150,15 @@ class HeaderBarWindow(Gtk.Window):
         self.new_box.pack_start(self.title,False, True,0)
         
         self.time_call=GObject.timeout_add(1000,self.prosetter,None)
+        self.audio_button.set_value(.3)
         self.s_volume()
     def prosetter(self, user_data):
         self.play_time=pygame.mixer.music.get_pos()/1000
         self.progres.set_fraction(self.play_time/self.time)
+        
         self.show_time="0"+str(int(self.play_time//60))+":"+str(int(self.play_time%60))
 
-        self.progres.set_text(str(self.show_time+"/"+self.pure_time))
+        self.progres.set_text(str(self.show_time+"/"+self.exact_time))
         return True
 
     def playsong(self,music_,widget,**args):
@@ -153,7 +167,7 @@ class HeaderBarWindow(Gtk.Window):
         try:
          self.text=music_file.tag.title
         except:
-            self.text=load
+            self.text=self.music_[self.Active][:30]
         
         self.title.set_markup(f"<b>{self.text}</b>")
         self.time=music_file.info.time_secs
@@ -173,7 +187,7 @@ class HeaderBarWindow(Gtk.Window):
         pygame.mixer.music.stop()
         self.progres.set_fraction(0.0)
         
-       
+     
 
         
     def pausesong(self,widget,**args):
@@ -189,21 +203,23 @@ class HeaderBarWindow(Gtk.Window):
         pygame.mixer.music.unpause()
        
     def item_selected(self, selection):
-      self.stopsong(" ")
+    #   self.stopsong(" ")/
       if self.Check!=None:
         self.model, self.row = selection.get_selected()
+        self.exact_time=self.model[self.row][3]
         if self.row is not None:
           self.Active=self.model[self.row][0]
           print(self.Active)
           self.playsong(self.music_," ")
+      
       else:
           self.Check=True
     def next(self,*args):
-        self.stopsong(" ")
+        # self.stopsong(" ")
         self.Active+=1
         self.playsong(self.music_," ")
     def previous(self,*args):
-        self.stopsong(" ")
+        # self.stopsong(" ")
         self.Active-=1
         # self.people_tree_view.set_cursor(,column=self.Active)
         # print(self.people_tree_view.get_cursor())
