@@ -4,6 +4,7 @@ gi.require_version("Gtk","3.0")
 from gi.repository import Gtk, GObject ,Gio
 import eyed3
 
+
 import pygame
 import os
 
@@ -11,7 +12,7 @@ class HeaderBarWindow(Gtk.Window):
 
     def __init__(self):
         Gtk.Window.__init__(self, title="")
-        self.set_border_width(10)
+        self.set_border_width(15)
         self.set_default_size(735, 495)
         self.Active=0
         self.Check=None
@@ -73,7 +74,8 @@ class HeaderBarWindow(Gtk.Window):
         box.add(self.right_arrow)
         self.right_arrow.connect("clicked",self.next)
         header_bar.pack_start(box)
-
+        
+        Gtk.ProgressBar()
 
         #box for music files
         self.box_ = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
@@ -88,7 +90,7 @@ class HeaderBarWindow(Gtk.Window):
        
         self.box_.pack_start(self.music_windows,True,True,0)
 
-        people_list_store = Gtk.ListStore(int, str,str,str)
+        people_list_store = Gtk.ListStore(int, str,str,str,str)
         
         self.add(self.box_)
 
@@ -99,25 +101,42 @@ class HeaderBarWindow(Gtk.Window):
 
         for item in enumerate (  music_):
             item=list(item)
+            load=eyed3.load(self.w_dir+item[1])
             try:
-              timing=eyed3.load(self.w_dir+item[1]).info.time_secs
+              timing=load.info.time_secs
               self.pure_time="0"+str(int(timing//60))+":"+str(int(timing%60))
             except:
                 self.pure_time="NA"
+
             try:
-              artist=eyed3.load(self.w_dir+item[1]).tag.artist[:30]
+              artist=load.tag.artist[:30]
               
             except:
                 artist="NA"
+            try:
+                title=load.tag.title[:30]
+                item[1]=title
+            except:
+                None
+            try:
+                album=load.tag.album[:30]
+            except:
+                album="NA"
+            
+            
+            
             item.append(artist)
+            item.append(album)
             item.append(self.pure_time)
+            
             item[1]=item[1][:30]
+           
 
             people_list_store.append(item)
 
         self.people_tree_view = Gtk.TreeView(people_list_store)
 
-        for i, col_title in enumerate(["No..","music", "artist","time"]):
+        for i, col_title in enumerate(["No..","music", "artist","album","time"]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(col_title, renderer, text=i)
 
@@ -137,7 +156,8 @@ class HeaderBarWindow(Gtk.Window):
         self.sep_box=Gtk.HBox()
         self.box_.add(self.sep_box)
         self.sep_box.add(self.seperate)
-
+         
+         #progressbar
         self.progres=Gtk.ProgressBar()
         self.progres.set_property("width-request",200)
         self.progres.set_show_text(True)
@@ -145,9 +165,14 @@ class HeaderBarWindow(Gtk.Window):
         self.box_.add(self.new_box)
         self.new_box.pack_end(self.progres,True,True,0)
 
+        #song title
         self.title=Gtk.Label("nothing")
         self.title.set_property("width-request", 200)
         self.new_box.pack_start(self.title,False, True,0)
+
+        #adding another box (horizontal)
+        self.last_box=Gtk.Box(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=10))
+        self.box_.add(self.last_box)
         
         self.time_call=GObject.timeout_add(1000,self.prosetter,None)
         self.audio_button.set_value(.3)
@@ -165,7 +190,7 @@ class HeaderBarWindow(Gtk.Window):
         load=self.w_dir+music_[self.Active]
         music_file=eyed3.load(load)
         try:
-         self.text=music_file.tag.title
+         self.text=music_file.tag.title[:30]
         except:
             self.text=self.music_[self.Active][:30]
         
@@ -173,6 +198,7 @@ class HeaderBarWindow(Gtk.Window):
         self.time=music_file.info.time_secs
         
         print(self.time)
+        print(self.text)
          
         pygame.mixer.music.load(load)
 
@@ -203,17 +229,21 @@ class HeaderBarWindow(Gtk.Window):
         pygame.mixer.music.unpause()
        
     def item_selected(self, selection):
-    #   self.stopsong(" ")/
-      if self.Check!=None:
-        self.model, self.row = selection.get_selected()
-        self.exact_time=self.model[self.row][3]
-        if self.row is not None:
-          self.Active=self.model[self.row][0]
-          print(self.Active)
-          self.playsong(self.music_," ")
-      
-      else:
-          self.Check=True
+        try:
+            self.stopsong(" ")
+        except:
+            pygame.mixer.music.unload()
+        #   self.stopsong(" ")/
+        if self.Check!=None:
+            self.model, self.row = selection.get_selected()
+            self.exact_time=self.model[self.row][4]
+            if self.row is not None:
+                self.Active=self.model[self.row][0]
+                print(self.Active)
+                self.playsong(self.music_," ")
+        
+        else:
+            self.Check=True
     def next(self,*args):
         # self.stopsong(" ")
         self.Active+=1
