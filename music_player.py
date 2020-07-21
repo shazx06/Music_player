@@ -191,10 +191,16 @@ class HeaderBarWindow(Gtk.Window):
         music_file=eyed3.load(load)
         try:
          self.text=music_file.tag.title[:30]
+         
         except:
             self.text=self.music_[self.Active][:30]
+        try:
+            art=music_file.tag.artist[:30]
+        except:
+            art=""
         
-        self.title.set_markup(f"<b>{self.text}</b>")
+        self.title.set_markup(f'''<b>{self.text}</b>
+<i>{art}</i>''')
         self.time=music_file.info.time_secs
         
         print(self.time)
@@ -231,8 +237,10 @@ class HeaderBarWindow(Gtk.Window):
     def item_selected(self, selection):
         try:
             self.stopsong(" ")
+            
         except:
-            pygame.mixer.music.unload()
+            None
+            
         #   self.stopsong(" ")/
         if self.Check!=None:
             self.model, self.row = selection.get_selected()
